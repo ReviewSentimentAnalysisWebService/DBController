@@ -11,9 +11,7 @@
 
 ##  __2. 필요 프로그램__
 
-
-> 1. chromedriver
-
+      1. chromedriver
 
 ## __3. 사용 간 유의점__
 
