@@ -3,7 +3,7 @@ from selenium import webdriver
 import time
 
 
-class naverShoppingCrowler :
+class NaverShoppingCrowler :
     driver = None
 
     def __init__(self):
