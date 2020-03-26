@@ -5,9 +5,9 @@
 ## __1. 필요 라이브러리 목록__
 
 
-> 1. selenium
-2. beautifulsoup4
-3. lxml
+      1. selenium
+      2. beautifulsoup4
+      3. lxml
 
 ##  __2. 필요 프로그램__
 
@@ -17,9 +17,9 @@
 
 ## __3. 사용 간 유의점__
 
->1. chromedriver 실행에는 chrome이 필요합니다.
-2. chromedriver버전과 chrome버전을 맞춰주십시오.
-3. chromedriver는 라이브러리와 동일 폴더 내에 있어야만 합니다.
+      1. chromedriver 실행에는 chrome이 필요합니다.
+      2. chromedriver버전과 chrome버전을 맞춰주십시오.
+      3. chromedriver는 라이브러리와 동일 폴더 내에 있어야만 합니다.
 
 ## __4. 사용 방법__
 
