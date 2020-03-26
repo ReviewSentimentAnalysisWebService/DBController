@@ -18,7 +18,11 @@ class NaverShoppingCrowler :
         review = []
 
         for i in range(1, 21):
-            review.append(soup.select("#_review_list > li:nth-child(" + str(i) + ") > div > div.atc")[0].text)
+            try :
+                review.append(soup.select("#_review_list > li:nth-child(" + str(i) + ") > div > div.atc")[0].text)
+            except IndexError :
+                break
+
 
         return review
 
@@ -26,7 +30,10 @@ class NaverShoppingCrowler :
         score = []
 
         for i in range(1, 21) :
-            score.append(soup.select("#_review_list > li:nth-child(" + str(i) +") > div > div.avg_area > a > span.curr_avg")[0].text)
+            try :
+                score.append(soup.select("#_review_list > li:nth-child(" + str(i) +") > div > div.avg_area > a > span.curr_avg")[0].text)
+            except IndexError :
+                break
 
         return score
 
@@ -63,8 +70,7 @@ class NaverShoppingCrowler :
 
         # for i in range(1, pageCount) :
         # pageCount = 1 # 한페이지 테스트용
-
-        for i in range(1, pageCount + 1) :
+        for i in range( 1, pageCount + 1) :
             self.driver.execute_script("shop.detail.ReviewHandler.page(" + str(i) + ", '_review_paging');")
             time.sleep(0.1)
             response = (self.driver.page_source).encode('utf-8')
