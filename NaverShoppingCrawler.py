@@ -3,7 +3,7 @@ from selenium import webdriver
 import time
 
 
-class NaverShoppingCrowler :
+class NaverShoppingCrawler :
     driver = None
 
     def __init__(self):
@@ -91,7 +91,7 @@ class NaverShoppingCrowler :
 
         print("File save complete : " + txt)
         # test
-    def getCrowlling(self, URL):
+    def getCrawlling(self, URL):
         self.driver.get(URL)
 
         response = (self.driver.page_source).encode('utf-8')
