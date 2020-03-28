@@ -1,4 +1,4 @@
-# NaverShoppingCrowler
+# NaverShoppingCrawler
 
   한 개의 네이버 쇼핑몰 페이지 댓글과 별점을 크롤링 하는 라이브러리 입니다.
 
@@ -23,10 +23,10 @@
 
 >1. 클래스를 생성합니다
 
-      crowler = NaverShoppingCrowler()
+      crowler = NaverShoppingCrawler()
 >2. 크롤링 하길 원하는 페이지의 URL을 getCrowlling 함수에 삽입합니다
 
-      crowler.getCrowlling(URL)
+      crowler.getCrawlling(URL)
 >3. 크롤링 결과가 txt 파일로 생성 됩니다 (이름은 nv_mid 값으로 생성됩니다)
 
 ## __5. 저장 결과__
