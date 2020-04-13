@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 from selenium import webdriver
+from urllib.parse import  urlparse
 import time
 
 
@@ -81,6 +82,7 @@ class NaverShoppingCrawler :
         print("Total " + str(pageCount) + "pages crowling complete")
         return returnStr
 
+
     def makeTextFile(self, fileName, resultString):
         txt = fileName + ".txt"
         f = open(txt, 'w', encoding='utf-8')
@@ -91,6 +93,11 @@ class NaverShoppingCrawler :
 
         print("File save complete : " + txt)
         # test
+
+    def getUrlParsed(self, URL):
+        url = urlparse(URL)
+        return url.query.split("&")[0].split("=")[1]  # nvMid 값을 추출함
+
     def getCrawlling(self, URL):
         self.driver.get(URL)
 
@@ -101,6 +108,6 @@ class NaverShoppingCrawler :
         resultStr = self.getContext(soup)
 
         # 파일 제목을 결정하는 방법이 필요함 : 현재 nv_mid 값을 사용중
-        self.makeTextFile(URL.split("=").pop(), resultStr)
+        self.makeTextFile(self.getUrlParsed(URL), resultStr)
 
         print("crowling complete")
