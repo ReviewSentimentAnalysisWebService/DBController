@@ -27,24 +27,39 @@ class NaverShoppingCrawler :
 
         return review
 
-    def getScore(self, soup) : # 리뷰에서 부여한 별점 정보를 가져온다 list 반환
+    def getScore(self, soup):  # 리뷰에서 부여한 별점 정보를 가져온다 list 반환
         score = []
 
-        for i in range(1, 21) :
-            try :
-                score.append(soup.select("#_review_list > li:nth-child(" + str(i) +") > div > div.avg_area > a > span.curr_avg")[0].text)
-            except IndexError :
+        for i in range(1, 21):
+            try:
+                score.append(soup.select(
+                    "#_review_list > li:nth-child(" + str(i) + ") > div > div.avg_area > a > span.curr_avg")[0].text)
+            except IndexError:
                 break
 
         return score
 
+    def getDate(self, soup) : # 리뷰를 작성한 날자를 가져온다 list 반환
+        date = []
+        # _review_list > li:nth-child(" + str(i) +") > div > div.avg_area > span > span:nth-child(3)
+        for i in range(1, 21) :
+            try :
+                date.append(soup.select("#_review_list > li:nth-child(" + str(i) +") > div > div.avg_area > span > span:nth-child(3)")[0].text)
+            except IndexError :
+                break
+
+        return date
+    def setReviewSort(self): # 리뷰 정렬 기준을 날자순으로 변경
+        self.driver.find_element_by_css_selector("#_review_sort_select > span:nth-child(2) > a").click() # 날자순
+        # self.driver.find_element_by_css_selector("#_review_sort_select > span:nth-child(1) > a").click() # 랭킹순
+
     def getContent(self, soup) : # 모든 리뷰를 하나의 텍스트로 만들어 주는 함수
         # review = []
         returnStr = ''
-        allReview, allScore = self.getReview(soup), self.getScore(soup)
+        allReview, allScore, allDate = self.getReview(soup), self.getScore(soup), self.getDate(soup)
 
-        for review,  score in zip(allReview, allScore) :
-            returnStr += review + "\t" + score + "\n"
+        for review, score, date in zip(allReview, allScore, allDate) :
+            returnStr += review + "\t" + score + "\t" + date + "\n"
 
         return returnStr
 
@@ -67,10 +82,12 @@ class NaverShoppingCrawler :
         # 먼저 총 리뷰의 갯수를 구해 리뷰 페이지의 수를 구한다
         pageCount = self.getReviewPageCount(soup)
 
-        returnStr = "review" + "\t" + "score" + "\n"
+        self.setReviewSort() # 리부 정렬을 날자순으로 바꾼다
+
+        returnStr = "review" + "\t" + "score" + "\t" + "date" + "\n"
 
         # for i in range(1, pageCount) :
-        # pageCount = 1 # 한페이지 테스트용
+        pageCount = 1 # 한페이지 테스트용
         for i in range( 1, pageCount + 1) :
             self.driver.execute_script("shop.detail.ReviewHandler.page(" + str(i) + ", '_review_paging');")
             time.sleep(0.1)
@@ -111,3 +128,7 @@ class NaverShoppingCrawler :
         self.makeTextFile(self.getUrlParsed(URL), resultStr)
 
         print("crowling complete")
+
+if __name__ == "__main__" :
+    crawler = NaverShoppingCrawler()
+    crawler.getCrawlling("https://search.shopping.naver.com/detail/detail.nhn?nv_mid=10565213662")
