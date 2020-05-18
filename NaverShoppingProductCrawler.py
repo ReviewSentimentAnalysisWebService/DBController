@@ -15,48 +15,50 @@ class NaverShoppingCrawler :
     def __del__(self):
         self.driver.close()
 
+    def getReviewList(self, soup):
+        return soup.find_all(class_="thumb_nail")
+
     def getReview(self, soup) : # 댓글의 리뷰를 추출한다 list 반환
-        review = []
+        reviews = []
 
-        for i in range(1, 21):
-            try :
-                review.append(soup.select("#_review_list > li:nth-child(" + str(i) + ") > div > div.atc")[0].text)
-            except IndexError :
-                break
+        for review in soup :
+            reviews.append(review.find(class_="atc").text)
 
-
-        return review
+        return reviews
 
     def getScore(self, soup):  # 리뷰에서 부여한 별점 정보를 가져온다 list 반환
-        score = []
+        scores = []
 
-        for i in range(1, 21):
-            try:
-                score.append(soup.select(
-                    "#_review_list > li:nth-child(" + str(i) + ") > div > div.avg_area > a > span.curr_avg")[0].text)
-            except IndexError:
-                break
+        for score in soup :
+            scores.append(score.find(class_="curr_avg").text)
 
-        return score
+        return scores
 
     def getDate(self, soup) : # 리뷰를 작성한 날자를 가져온다 list 반환
-        date = []
-        # _review_list > li:nth-child(" + str(i) +") > div > div.avg_area > span > span:nth-child(3)
-        for i in range(1, 21) :
-            try :
-                date.append(soup.select("#_review_list > li:nth-child(" + str(i) +") > div > div.avg_area > span > span:nth-child(3)")[0].text)
-            except IndexError :
-                break
+        dates = []
 
-        return date
+        for date in soup :
+            dates.append(date.find_all(class_="info_cell")[2].text)
+
+        return dates
+
     def setReviewSort(self): # 리뷰 정렬 기준을 날자순으로 변경
         self.driver.find_element_by_css_selector("#_review_sort_select > span:nth-child(2) > a").click() # 날자순
         # self.driver.find_element_by_css_selector("#_review_sort_select > span:nth-child(1) > a").click() # 랭킹순
 
+    def getReviewPageCount(self, soup) :
+        reviewPages = soup.select("#_review_paging > a.next_end")[0]['onclick'].split("(")[1].split(',')[0]
+        return reviewPages
+
     def getContent(self, soup) : # 모든 리뷰를 하나의 텍스트로 만들어 주는 함수
+
+        reviewDivs = self.getReviewList(soup)
         # review = []
         returnStr = ''
-        allReview, allScore, allDate = self.getReview(soup), self.getScore(soup), self.getDate(soup)
+
+        allReview = self.getReview(reviewDivs)
+        allScore = self.getScore(reviewDivs)
+        allDate = self.getDate(reviewDivs)
 
         for review, score, date in zip(allReview, allScore, allDate) :
             returnStr += review + "\t" + score + "\t" + date + "\n"
@@ -64,39 +66,33 @@ class NaverShoppingCrawler :
         return returnStr
 
 
-    def getReviewPageCount(self, soup) :
-        tempStr = soup.select("#fixed_tab_area > div > ul > li.mall_review > a > em")[0].text.split(",")
-        numStr = ""
-        for temp in tempStr:
-            numStr += temp
+    def getContext(self) :
 
-        maxReviewCont = int(numStr)  # 총 리뷰의 갯수
+        self.setReviewSort() # 리뷰 정렬을 날자순으로 바꾼다
+        time.sleep(1)
 
-        reviewPageCount = int(maxReviewCont / 20) + 1  # 리뷰 페이지의 수
+        response = self.driver.page_source.encode('utf-8')
+        soup = BeautifulSoup(response, 'lxml')
 
-        print("review count complete")
-        return reviewPageCount
-
-
-    def getContext(self, soup) :
-        # 먼저 총 리뷰의 갯수를 구해 리뷰 페이지의 수를 구한다
         pageCount = self.getReviewPageCount(soup)
-
-        self.setReviewSort() # 리부 정렬을 날자순으로 바꾼다
 
         returnStr = "review" + "\t" + "score" + "\t" + "date" + "\n"
 
         # for i in range(1, pageCount) :
-        pageCount = 1 # 한페이지 테스트용
+        pageCount = 10
         for i in range( 1, pageCount + 1) :
             self.driver.execute_script("shop.detail.ReviewHandler.page(" + str(i) + ", '_review_paging');")
-            time.sleep(0.1)
-            response = (self.driver.page_source).encode('utf-8')
+            time.sleep(1)
+
+            response = self.driver.page_source.encode('utf-8')
             soup = BeautifulSoup(response, 'lxml')
+
             returnStr += self.getContent(soup)
+
             print(str(i) + "/" + str(pageCount) +  "page crowling complete")
 
         print("Total " + str(pageCount) + "pages crowling complete")
+
         return returnStr
 
 
@@ -118,12 +114,7 @@ class NaverShoppingCrawler :
     def getCrawlling(self, URL):
         self.driver.get(URL)
 
-        response = (self.driver.page_source).encode('utf-8')
-
-        soup = BeautifulSoup(response, 'lxml')
-
-        resultStr = self.getContext(soup)
-
+        resultStr = self.getContext()
         # 파일 제목을 결정하는 방법이 필요함 : 현재 nv_mid 값을 사용중
         self.makeTextFile(self.getUrlParsed(URL), resultStr)
 
