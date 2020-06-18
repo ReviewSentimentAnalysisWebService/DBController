@@ -4,7 +4,7 @@ from urllib.parse import  urlparse
 import time
 
 
-class NaverShoppingCrawler :
+class ReviewCrawler :
     driver = None
 
     def __init__(self):
@@ -47,8 +47,11 @@ class NaverShoppingCrawler :
         # self.driver.find_element_by_css_selector("#_review_sort_select > span:nth-child(1) > a").click() # 랭킹순
 
     def getReviewPageCount(self, soup) :
-        reviewPages = soup.select("#_review_paging > a.next_end")[0]['onclick'].split("(")[1].split(',')[0]
-        return reviewPages
+        try :
+            reviewPages = soup.select("#_review_paging > a.next_end")[0]['onclick'].split("(")[1].split(',')[0]
+        except IndexError :
+            reviewPages = 1
+        return int(reviewPages)
 
     def getContent(self, soup) : # 모든 리뷰항목을 각각의 리스트로 반환
         # review, score, date 순
@@ -73,7 +76,7 @@ class NaverShoppingCrawler :
 
         reviews, scores, dates = [], [], []
 
-        for i in range( 1, pageCount + 1) :
+        for i in range(1, pageCount + 1) :
             self.driver.execute_script("shop.detail.ReviewHandler.page(" + str(i) + ", '_review_paging');")
             time.sleep(1)
 
@@ -106,16 +109,17 @@ class NaverShoppingCrawler :
         url = urlparse(URL)
         return url.query.split("&")[0].split("=")[1]  # nvMid 값을 추출함
 
-    def getCrawlling(self, nv_mid):
+    def getCrawlling(self, nv_mid, pagecount = None ):
         URL = "https://search.shopping.naver.com/detail/detail.nhn?nv_mid="
         self.driver.get(URL + nv_mid)
+
         reviews, scores, dates = [], [], []
-        reviews, scores, dates = self.getContext(5)
+        reviews, scores, dates = self.getContext(pagecount)
         # 파일 제목을 결정하는 방법이 필요함 : 현재 nv_mid 값을 사용중
         # self.makeTextFile(nv_mid, resultStr)
         print("crowling complete")
         return reviews, scores, dates
 
 if __name__ == "__main__" :
-    crawler = NaverShoppingCrawler()
+    crawler = ReviewCrawler()
     crawler.getCrawlling("10565213662")
