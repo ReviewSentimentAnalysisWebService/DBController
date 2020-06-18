@@ -1,125 +1,221 @@
-from bs4 import BeautifulSoup
-from selenium import webdriver
-from urllib.parse import  urlparse
-import time
+import pymysql.cursors
+
+# from review_preprocessor import ReviewPreprocessor
+# from sentiment_analyzer import SentimentAnalyzer
 
 
-class ReviewCrawler :
-    driver = None
+# from selenium.common.exceptions import NoSuchElementException
+# from NaverShoppingProductsCrawler import NaverShoppingProductsCrawler
+# from NaverShoppingReviewCrawler import NaverShoppingReviewCrawler
+
+# Connect to the database
+
+class sentimentalDBM:
+    connection = None
 
     def __init__(self):
 
-        self.driver = webdriver.Chrome("chromedriver")
-        self.driver.implicitly_wait(1)
+        self.connection = pymysql.connect(host='127.0.0.1',
+                                          user='root',
+                                          password='mysql',
+                                          db='testsentimental',  # Schema 선택
+                                          charset='utf8mb4',
+                                          cursorclass=pymysql.cursors.DictCursor)
 
     def __del__(self):
-        self.driver.close()
+        self.connection.close()
 
-    def getReviewList(self, soup):
-        return soup.find_all(class_="thumb_nail")
+    def insertProduct(self, nv_mids, names, prices, dates, img_urls, cat_id):
+        try:
+            with self.connection.cursor() as cursor:
+                # Create a new record
+                sql = "INSERT INTO `product_list`(`nv_mid`, `cat_id`, `name`, `date`, `img_url`, `price`) VALUES(%s, %s, %s, %s, %s, %s);"
+                for nv_midTmp, namesTmp, pricesTmp, dateTmp, img_urlTmp in zip(nv_mids, names, prices, dates, img_urls):
+                    try:
+                        cursor.execute(sql, (nv_midTmp, cat_id, namesTmp, dateTmp, img_urlTmp, pricesTmp))
+                    except pymysql.err.IntegrityError as e:
+                        print(e)
 
-    def getReview(self, soup) : # 댓글의 리뷰를 추출한다 list 반환
-        reviews = []
+            self.connection.commit()
+        finally:
+            print("insertProduct Complete")
 
-        for review in soup :
-            reviews.append(review.find(class_="atc").text)
+    def selectProduct(self, cat_id, limit=None):
+        try:
+            with self.connection.cursor() as cursor:
+                # Create a new record
+                if limit is None:
+                    sql = "SELECT nv_mid FROM product_list WHERE cat_id=%s;"
+                else:
+                    sql = "SELECT nv_mid FROM product_list WHERE cat_id=%s limit " + str(limit) + ";"
+                cursor.execute(sql, cat_id)
+                rows = cursor.fetchall()
+                return rows
+        finally:
+            print("ACTION Complete")
 
-        return reviews
+    def insertReivew(self, review, score, date, nv_mid):
+        # Connect to the database
+        try:
+            with self.connection.cursor() as cursor:
+                # Create a new record
+                "INSERT INTO `product_review`(`nv_mid`, `review`, `score`, `date`) VALUES('1', '1', '1', '1', '1');"
+                sql = "INSERT INTO `product_review`(`nv_mid`, `review`, `score`, `date`) VALUES(%s, %s, %s, %s);"
+                for reviewTmp, scoreTmp, dateTmp in zip(review, score, date):
+                    try:
+                        cursor.execute(sql, (nv_mid, reviewTmp, scoreTmp, dateTmp))
+                    except pymysql.err.IntegrityError:
+                        print("중복 발생 pass")
 
-    def getScore(self, soup):  # 리뷰에서 부여한 별점 정보를 가져온다 list 반환
-        scores = []
+            # connection is not autocommit by default. So you must commit to save
+            # your changes.
+            self.connection.commit()
+        finally:
+            print("ACTION Complete")
 
-        for score in soup :
-            scores.append(score.find(class_="curr_avg").text)
+    def selectReview(self, nv_mid, limit=None):
+        # Connect to the database
 
-        return scores
+        try:
+            with self.connection.cursor() as cursor:
+                # Create a new record
+                if limit is None:
+                    sql = "SELECT review_id, review FROM product_review WHERE nv_mid=%s;"
+                else:
+                    sql = "SELECT review_id, review FROM product_review WHERE nv_mid=%s limit " + str(limit) + ";"
+                cursor.execute(sql, nv_mid)
+                rows = cursor.fetchall()
+                return rows
+        finally:
+            print("ACTION Complete")
 
-    def getDate(self, soup) : # 리뷰를 작성한 날자를 가져온다 list 반환
-        dates = []
+    def selectCategorys(self):
+        # Connect to the database
 
-        for date in soup :
-            dates.append(date.find_all(class_="info_cell")[2].text)
+        try:
+            with self.connection.cursor() as cursor:
+                # Create a new record
+                sql = "SELECT * FROM category;"
+                cursor.execute(sql)
+                rows = cursor.fetchall()
+                return rows
+        finally:
+            print("ACTION Complete")
 
-        return dates
+    def selectKeywords(self, cat_id):
+        # Connect to the database
+        try:
+            with self.connection.cursor() as cursor:
+                # Create a new record
+                sql = "SELECT key_id, keyword FROM keyword WHERE cat_id=%s;"
+                cursor.execute(sql, cat_id)
+                rows = cursor.fetchall()
+                return_list = []
+                for result in rows:
+                    return_list.append(result['keyword'])
 
-    def setReviewSort(self): # 리뷰 정렬 기준을 날자순으로 변경
-        self.driver.find_element_by_css_selector("#_review_sort_select > span:nth-child(2) > a").click() # 날자순
-        # self.driver.find_element_by_css_selector("#_review_sort_select > span:nth-child(1) > a").click() # 랭킹순
+                # return return_list
+                return rows
+        finally:
+            print("ACTION Complete")
 
-    def getReviewPageCount(self, soup) :
-        try :
-            reviewPages = soup.select("#_review_paging > a.next_end")[0]['onclick'].split("(")[1].split(',')[0]
-        except IndexError :
-            reviewPages = 1
-        return int(reviewPages)
+    def insertReviewSentimental(self, nv_mid, review_id, keywords, results, senti_scores):
+        try:
+            with self.connection.cursor() as cursor:
+                # Create a new record
+                sql = "INSERT INTO `product_review_sentimental` (`nv_mid`, `review_id`, `sentence_number`, `key_id`, `sentence`, `senti_score`, `quality_score`) VALUES (%s, %s, %s, %s, %s, %s, %s);"
+                sentence_number = 0
+                for result, senti_score in zip(results, senti_scores):
+                    # result struct : ['sentence', keyword ,senti_score(0~1사이), quality_score]
+                    sentence_number += 1
+                    key_id = next(item["key_id"] for item in keywords if item["keyword"] == result[1])
+                    try:
+                        cursor.execute(sql, (nv_mid, int(review_id), sentence_number, int(key_id),
+                                             result[0], senti_score, result[2]))
+                    except pymysql.err.IntegrityError:
+                        print("중복 발생 pass")
 
-    def getContent(self, soup) : # 모든 리뷰항목을 각각의 리스트로 반환
-        # review, score, date 순
-
-        reviewDivs = self.getReviewList(soup)
-        # review = []
-        returnStr = ''
-
-        return self.getReview(reviewDivs), self.getScore(reviewDivs), self.getDate(reviewDivs)
+            # connection is not autocommit by default. So you must commit to save
+            # your changes.
+            self.connection.commit()
+        finally:
+            print("ACTION Complete")
 
 
-    def getContext(self, pageCount = None) :
+"""
+def crawllingProducts(cat_id,  pagecount = None):
+    crawler = NaverShoppingProductsCrawler.ProductCrawler()
+    return crawler.getCrawlling(cat_id, pagecount)
 
-        self.setReviewSort() # 리뷰 정렬을 날자순으로 바꾼다
-        time.sleep(1)
+def crawlingAllProducts():
+    # cat_ids = "50000151",  "50000437", "50000438", "50001203"
+    dbms = sentimentalDBM()
+    cat_ids = dbms.selectCategorys()
+    print(cat_ids)
+    for cat_id in cat_ids:
+        print(cat_id)
+        nv_mids, names, prices, dates, img_urls = crawllingProducts(cat_id['cat_id'], 10)
+        # print(nv_mids, names, prices, dates, img_urls )
+        dbms.insertProduct(nv_mids, names, prices, dates, img_urls, cat_id['cat_id'])
 
-        response = self.driver.page_source.encode('utf-8')
-        soup = BeautifulSoup(response, 'lxml')
+def crawlingReviews(cat_id = None):
+    crawler = NaverShoppingReviewCrawler.ReviewCrawler()
+    dbms = sentimentalDBM()
 
-        if pageCount is None :
-            pageCount = self.getReviewPageCount(soup)
+    nv_mids = dbms.selectProduct(cat_id)
 
-        reviews, scores, dates = [], [], []
+    for nv_mid in nv_mids:
+        nv_mid = nv_mid['nv_mid']
+        try:
+            reviews, scores, dates = crawler.getCrawlling(nv_mid)
+        except NoSuchElementException as e:
+            print(e)
+        # 중복 제거
+        set_list = list(set(zip(reviews, scores, dates)))
+        reviews, scores, dates = map(list, zip(*set_list))
+        # 중복 제거 완료
+        dbms.insertReivew(reviews, scores, dates, nv_mid)
 
-        for i in range(1, pageCount + 1) :
-            self.driver.execute_script("shop.detail.ReviewHandler.page(" + str(i) + ", '_review_paging');")
-            time.sleep(1)
+def crawlingAllReview():
+    dbms = sentimentalDBM()
+    cat_ids = dbms.selectCategorys()
+    print(cat_ids)
+    for cat_id in cat_ids:
+        cat_id = cat_id['cat_id']
+        crawlingReviews(cat_id)
+"""
 
-            response = self.driver.page_source.encode('utf-8')
-            soup = BeautifulSoup(response, 'lxml')
 
-            reviewsTmp, scoresTmp, datesTmp = self.getContent(soup)
-            reviews += reviewsTmp
-            scores += scoresTmp
-            dates += datesTmp
+def sentimentalProcessor():
+    dbms = sentimentalDBM()
+    cat_ids = dbms.selectCategorys()
+    cat_id = cat_ids[3]["cat_id"]
 
-            print(str(i) + "/" + str(pageCount) +  "page crowling complete")
+    keywords = dbms.selectKeywords(cat_id)
+    products = dbms.selectProduct(cat_id, limit=10)
 
-        print("Total " + str(pageCount) + "pages crowling complete")
+    keywords_str = []  # 모델 삽입용
 
-        return reviews, scores, dates
+    senti_scores = []
 
-    def makeTextFile(self, fileName, resultString):
-        txt = fileName + ".txt"
-        f = open(txt, 'w', encoding='utf-8')
+    sent_analyzer = SentimentAnalyzer()
 
-        f.write(resultString)
+    for keyword in keywords:
+        if keyword["keyword"] != "기타":
+            keywords_str.append(keyword["keyword"])
 
-        f.close()
+    for product in products:
+        reviews = dbms.selectReview(product["nv_mid"], limit=100)
 
-        print("File save complete : " + txt)
-        # test
+        processor = ReviewPreprocessor("w2vmodel_mouse", keywords_str)
+        for review in reviews:
+            results = processor.process(review['review'])
+            for result in results:
+                print(result[0])
+                senti_scores.append(sent_analyzer.analyze(result[0]))
 
-    def getUrlParsed(self, URL):
-        url = urlparse(URL)
-        return url.query.split("&")[0].split("=")[1]  # nvMid 값을 추출함
+            dbms.insertReviewSentimental(product["nv_mid"], review["review_id"], keywords, results, senti_scores)
 
-    def getCrawlling(self, nv_mid, pagecount = None ):
-        URL = "https://search.shopping.naver.com/detail/detail.nhn?nv_mid="
-        self.driver.get(URL + nv_mid)
 
-        reviews, scores, dates = [], [], []
-        reviews, scores, dates = self.getContext(pagecount)
-        # 파일 제목을 결정하는 방법이 필요함 : 현재 nv_mid 값을 사용중
-        # self.makeTextFile(nv_mid, resultStr)
-        print("crowling complete")
-        return reviews, scores, dates
-
-if __name__ == "__main__" :
-    crawler = ReviewCrawler()
-    crawler.getCrawlling("10565213662")
+if __name__ == "__main__":
+    sentimentalProcessor()
